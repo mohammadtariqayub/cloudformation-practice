@@ -1,3 +1,10 @@
-Type: AWS::S3::Bucket
-Properties: 
-  BucketName: mohammad-poc-s3-test-bucket-01
+AWSTemplateFormatVersion: 2010-09-09
+### Description: DOI baseline S3 bucket template
+### Note: Must be deployed in Sydney region
+
+Description: 'Mohammad standard S3 bucket deployment'
+Resources:
+  MyS3Bucket:
+    Type: "AWS::S3::Bucket"
+    Properties:
+      BucketName: mohammad-s3-bucket-test01
