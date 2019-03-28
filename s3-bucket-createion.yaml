@@ -8,3 +8,4 @@ Resources:
     Type: "AWS::S3::Bucket"
     Properties:
       BucketName: mohammad-s3-bucket-test01
+      AccessControl: PublicRead
