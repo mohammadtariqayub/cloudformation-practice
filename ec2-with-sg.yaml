@@ -9,20 +9,21 @@ Parameters:
     Type: String
     Default: amadev-moh-1
     Description: Name of the host
-  SubnetId:
+  MySubnetId:
     Type: "AWS::EC2::Subnet::Id"
     Default: subnet-058a425c
     Description: Subnet Id
 
 Resources:
-  MyEC2:
+  MyEC2Instance:
     Type: 'AWS::EC2::Instance'
     Properties:
       AvailabilityZone: ap-southeast-2a
       ImageId: ami-04481c741a0311bbb
       InstanceType: t3.small
-#      SecurityGroups: !Ref MySG
-      SubnetId: !Ref SubnetId
+      SubnetId: !Ref MySubnetId
+      SecurityGroupIds:
+       - !Ref MySecurityGroup
       KeyName: DOI-POC-MOHAMMAD-ACCESS-KEY
       BlockDeviceMappings:
         -
@@ -34,14 +35,14 @@ Resources:
         -
           Key: Name
           Value:  !Ref HostName
-  MySG:
+  MySecurityGroup:
    Type: "AWS::EC2::SecurityGroup"
    Properties:
-     GroupName: "mohammad-vpc01-ssh"
+     GroupName: "mohammad-vpc01-ssh-1"
      GroupDescription: "Security group with ssh and rdp access"
      VpcId: vpc-0da9da6feea5676db
      SecurityGroupIngress:
-     - CidrIp: "10.0.0.0/8"
+     - CidrIp: "0.0.0.0/0"
        IpProtocol: "tcp"
        FromPort: "22"
        ToPort: "22"
@@ -57,4 +58,4 @@ Resources:
   MyENI:
     Type: 'AWS::EC2::EIP'
     Properties:
-      InstanceId: !Ref MyEC2
+      InstanceId: !Ref MyEC2Instance
