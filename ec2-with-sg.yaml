@@ -13,32 +13,58 @@ Parameters:
     Type: "AWS::EC2::Subnet::Id"
     Default: subnet-058a425c
     Description: Subnet Id
-
+  ImageId:
+    Type: String
+    Default: ami-04481c741a0311bbb
+    Description: AMI ID
+  EnvironmentName:
+    Description: Environment Name
+    Type: String
+    AllowedValues: [dev, prd]
+    ConstraintDescription: must be dev or prd
+  OS:
+    Type: String
+    Default: aws-linux
+    Description: OS Name
+Mappings:
+  EnvironmentToInstanceType:
+    dev:
+      instanceType: t2.micro
+    # we want a bigger instance type in production
+    prd:
+      instanceType: t2.small
 Resources:
   MyEC2Instance:
     Type: 'AWS::EC2::Instance'
     Properties:
-      AvailabilityZone: ap-southeast-2a
-      ImageId: ami-04481c741a0311bbb
+#      AvailabilityZone: ap-southeast-2a
+      ImageId: !Ref ImageId
       InstanceType: t3.small
       SubnetId: !Ref MySubnetId
       SecurityGroupIds:
        - !Ref MySecurityGroup
       KeyName: DOI-POC-MOHAMMAD-ACCESS-KEY
+      InstanceType: !FindInMap [EnvironmentToInstanceType, !Ref 'EnvironmentName', instanceType]
       BlockDeviceMappings:
         -
-          DeviceName: "/dev/sda1"
+          DeviceName: "/dev/xvda"
           Ebs:
-            VolumeSize: 8
+            VolumeSize: 10
             VolumeType: gp2
       Tags:
         -
           Key: Name
           Value:  !Ref HostName
+        -
+          Key: OS
+          Value: !Ref OS
+        -
+          Key: Environment
+          Value: !Ref EnvironmentName
   MySecurityGroup:
    Type: "AWS::EC2::SecurityGroup"
    Properties:
-     GroupName: "mohammad-vpc01-ssh-1"
+     GroupName: "mohammad-vpc01-ssh-rdp-cf"
      GroupDescription: "Security group with ssh and rdp access"
      VpcId: vpc-0da9da6feea5676db
      SecurityGroupIngress:
@@ -52,6 +78,11 @@ Resources:
        FromPort: "3389"
        ToPort: "3389"
        Description: "DISRD RDP Network Logon Access"
+     - CidrIp: "58.173.177.251/32"
+       IpProtocol: "tcp"
+       FromPort: "22"
+       ToPort: "22"
+       Description: "Mohammad Laptop"
      Tags:
      - Key: Name
        Value: sg-moh-poc-ssh-rdp
