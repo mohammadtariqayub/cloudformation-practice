@@ -1,0 +1,60 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: 'Mohammad standard ec2 with SG an eni deployment'
+
+Parameters:
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+    Description: Enter the VPCId that the system will be deployed to
+  HostName:
+    Type: String
+    Default: amadev-moh-1
+    Description: Name of the host
+  SubnetId:
+    Type: "AWS::EC2::Subnet::Id"
+    Default: subnet-058a425c
+    Description: Subnet Id
+
+Resources:
+  MyEC2:
+    Type: 'AWS::EC2::Instance'
+    Properties:
+      AvailabilityZone: ap-southeast-2a
+      ImageId: ami-04481c741a0311bbb
+      InstanceType: t3.small
+#      SecurityGroups: !Ref MySG
+      SubnetId: !Ref SubnetId
+      KeyName: DOI-POC-MOHAMMAD-ACCESS-KEY
+      BlockDeviceMappings:
+        -
+          DeviceName: "/dev/sda1"
+          Ebs:
+            VolumeSize: 8
+            VolumeType: gp2
+      Tags:
+        -
+          Key: Name
+          Value:  !Ref HostName
+  MySG:
+   Type: "AWS::EC2::SecurityGroup"
+   Properties:
+     GroupName: "mohammad-vpc01-ssh"
+     GroupDescription: "Security group with ssh and rdp access"
+     VpcId: vpc-0da9da6feea5676db
+     SecurityGroupIngress:
+     - CidrIp: "10.0.0.0/8"
+       IpProtocol: "tcp"
+       FromPort: "22"
+       ToPort: "22"
+       Description: "DISRD SSH Network Logon Access"
+     - CidrIp: "10.0.0.0/8"
+       IpProtocol: "tcp"
+       FromPort: "3389"
+       ToPort: "3389"
+       Description: "DISRD RDP Network Logon Access"
+     Tags:
+     - Key: Name
+       Value: sg-moh-poc-ssh-rdp
+  MyENI:
+    Type: 'AWS::EC2::EIP'
+    Properties:
+      InstanceId: !Ref MyEC2
