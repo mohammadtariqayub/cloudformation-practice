@@ -1,0 +1,119 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: 'Mohammad standard ec2 with SG an eni deployment'
+
+Parameters:
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+    Description: Enter the VPCId that the system will be deployed to
+  HostName:
+    Type: String
+    Default: amadev-moh-1
+    Description: Name of the host
+  MySubnetId:
+    Type: "AWS::EC2::Subnet::Id"
+    Default: subnet-058a425c
+    Description: Subnet Id
+  ImageId:
+    Type: String
+    Default: ami-04481c741a0311bbb
+    Description: AMI ID
+  EnvironmentName:
+    Description: Environment Name
+    Type: String
+    AllowedValues:
+      - dev
+      - prd
+    ConstraintDescription: must be dev or prd
+  OS:
+    Type: String
+    Default: aws-linux
+    Description: OS Name
+
+Conditions:
+  CreateProdResources: !Equals [ !Ref EnvironmentName, prd ]
+
+Mappings:
+  EnvironmentToInstanceType:
+    dev:
+      instanceType: t2.micro
+    # we want a bigger instance type in production
+    prd:
+      instanceType: t2.small
+
+Resources:
+  MyEC2Instance:
+    Type: 'AWS::EC2::Instance'
+    Properties:
+#      AvailabilityZone: ap-southeast-2a
+      ImageId: !Ref ImageId
+      InstanceType: t3.small
+      SubnetId: !Ref MySubnetId
+      SecurityGroupIds:
+       - !Ref MySecurityGroup
+      KeyName: DOI-POC-MOHAMMAD-ACCESS-KEY
+      InstanceType: !FindInMap [EnvironmentToInstanceType, !Ref 'EnvironmentName', instanceType]
+      BlockDeviceMappings:
+        -
+          DeviceName: "/dev/xvda"
+          Ebs:
+            VolumeSize: 10
+            VolumeType: gp2
+      Tags:
+        -
+          Key: Name
+          Value:  !Ref HostName
+        -
+          Key: OS
+          Value: !Ref OS
+        -
+          Key: Environment
+          Value: !Ref EnvironmentName
+
+  MountPoint:
+    Type: "AWS::EC2::VolumeAttachment"
+    Condition: CreateProdResources
+    Properties:
+      InstanceId:
+        !Ref MyEC2Instance
+      VolumeId:
+        !Ref NewVolume
+      Device: /dev/sdh
+
+  NewVolume:
+    Type: "AWS::EC2::Volume"
+    Condition: CreateProdResources
+    Properties:
+      Size: 2
+      AvailabilityZone:
+        !GetAtt MyEC2Instance.AvailabilityZone
+
+  MySecurityGroup:
+   Type: "AWS::EC2::SecurityGroup"
+   Properties:
+     GroupName: "mohammad-vpc01-ssh-rdp-cf"
+     GroupDescription: "Security group with ssh and rdp access"
+     VpcId: vpc-0da9da6feea5676db
+     SecurityGroupIngress:
+     - CidrIp: "0.0.0.0/0"
+       IpProtocol: "tcp"
+       FromPort: "22"
+       ToPort: "22"
+       Description: "DISRD SSH Network Logon Access"
+     - CidrIp: "10.0.0.0/8"
+       IpProtocol: "tcp"
+       FromPort: "3389"
+       ToPort: "3389"
+       Description: "DISRD RDP Network Logon Access"
+     - CidrIp: "58.173.177.251/32"
+       IpProtocol: "tcp"
+       FromPort: "22"
+       ToPort: "22"
+       Description: "Mohammad Laptop"
+     Tags:
+     - Key: Name
+       Value: sg-moh-poc-ssh-rdp
+
+  MyENI:
+    Type: 'AWS::EC2::EIP'
+    Properties:
+      InstanceId: !Ref MyEC2Instance
