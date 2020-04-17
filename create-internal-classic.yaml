@@ -1,0 +1,157 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Network Load Balancer
+
+Parameters:
+  CLBName:
+    Description: Network Load Balancer Name
+    Type: String
+    Default: nlb-moh-test
+    
+  CLBScheme:
+    Description: Network Load Balancer Scheme
+    Type: String
+    Default: internal
+    AllowedValues:
+      - internet-facing
+      - internal
+  
+  CLBAcessLogBucket:
+    Description: Network Load Balancer access log bucket
+    Type: String
+    Default: s3-prod-logs-syd-959603514248
+      
+  CertificateArn:
+    Description: Certificate ARN
+    Type: String
+    Default: arn:aws:acm:ap-southeast-2:959603514248:certificate/8fa5a4db-d142-49d6-b543-6e5cb9ea015c
+
+  VpcId:
+    Description: Enter the VPCId that the system will be deployed to
+    Type: AWS::EC2::VPC::Id
+    Default: vpc-6880690c
+
+  SecurityGroups:
+    Description: CLB Security Group
+    Type: String
+    Default: subnet-30d70a46
+
+  WebSubnetA:
+    Description: Web Subnet A ID
+    Type: AWS::EC2::Subnet::Id
+    Default: subnet-30d70a46
+
+  WebSubnetB:
+    Description: Web Subnet B ID
+    Type: AWS::EC2::Subnet::Id
+    Default: subnet-9e289cfa
+      
+  WebSubnetC:
+    Description: Web Subnet C ID
+    Type: AWS::EC2::Subnet::Id
+    Default: subnet-4489411d
+      
+  EC2Instance1:
+    Description: EC2Instance1
+    Type: String
+    Default: i-0718e63316a116334
+
+  EC2Instance2:
+    Description: EC2Instance2
+    Type: String
+    Default: i-0997e946d2a3a2957
+    
+  Application:
+    Description: Application Name or web site
+    Type: String
+    Default: nlb-test-moh.dpi.nsw.gov.au
+    
+  BusinessOwner:
+    Description: AWS Account Alias
+    Type: String
+    Default: aws-disrd-dev
+   
+  BusinessUnit:
+    Description: Name of team branch
+    Type: String
+    Default: vdc
+    
+  CFNTemplate:
+    Description: Cloudformation template file name
+    Type: String
+    Default: create-internal-nlb.yaml
+    
+  Criticality:
+    Description: critical,vhigh,high,med,low
+    Type: String
+    Default: low
+    AllowedValues:
+      - low
+      - med
+      - high
+      - vhigh
+      - critical
+      
+  Environment:
+    Description: prd/tst/dev
+    Type: String
+    Default: tst
+    AllowedValues:
+      - dev
+      - tst
+      - prd
+      
+  RecID:
+    Description: Cherwell CSP number
+    Type: String
+    Default: CSPxxxx
+    
+  SystemOwner:
+    Description: Email address of the system owner
+    Type: String
+    Default: mohammad.ayub@dpie.nsw.gov.au
+
+  Role:
+    Description: Role description
+    Type: String
+    Default: 'web'
+ 
+Resources:
+  ClassicLoadBalancer:
+    Type: AWS::ElasticLoadBalancing::LoadBalancer
+    Properties:
+      AvailabilityZones:
+        Fn::GetAZs: ''
+      CrossZone: 'true'
+      Listeners:
+      - LoadBalancerPort: '443'
+        InstancePort: '443'
+        Protocol: HTTPS
+      HealthCheck:
+        Target: HTTP:80/
+        HealthyThreshold: '3'
+        UnhealthyThreshold: '5'
+        Interval: '30'
+        Timeout: '5'
+      Instances:
+        - !Ref EC2Instance1
+        - !Ref EC2Instance2
+      Subnets:
+        - !Ref WebSubnetA
+        - !Ref WebSubnetB
+        - !Ref WebSubnetC
+      LBCookieStickinessPolicy: 
+        - CookieExpirationPeriod: 21600
+          PolicyName: 'Three-hours'
+      SecurityGroups: !Ref SecurityGroups
+      CrossZone: true
+      LoadBalancerName: !Ref CLBName
+      Scheme: internal
+      AccessLoggingPolicy: 
+        - EmitInterval: 60
+          Enabled: true
+          S3BucketName: !Ref CLBAcessLogBucket
+          S3BucketPrefix: !Join
+              - ''
+              - - !Ref CLBName
+                - '-alb-access-logs'
+        
